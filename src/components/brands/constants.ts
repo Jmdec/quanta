@@ -29,4 +29,4 @@ export const INSTITUTIONAL_CONTACTS = {
 } as const;
 
 export const HERO_IMAGE = "/brands/hero-tissue.jpg"; // tissue roll + napkins photo
-export const INSTITUTIONAL_HERO_IMAGE = "/brands/eco-hygiene-dispenser.jpg"; // wall dispenser photo
+export const INSTITUTIONAL_HERO_IMAGE = "/brands/FOR BUSINESS BANNER.png"; // wall dispenser photo
