@@ -1,0 +1,169 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+:root {
+  --background: #1e3b2a;
+  --foreground: #f6f2e7;
+  --border: #4c8a55;
+
+  --destructive: #b3261e;
+  --destructive-foreground: #f6f2e7;
+
+  /* Quanta Paper brand palette — forest + paper */
+  --color-forest-deep: #1e3b2a;
+  --color-forest: #2f5c3a;
+  --color-forest-light: #4c8a55;
+  --color-forest-vivid: #2ea043;
+  --color-moss: #9bb87e;
+  --color-sage-light: #e7f1e2; /* light green for card-showcase sections */
+  --color-sun: #e0a83f;
+  --color-sun-light: #f0cd7a;
+  --color-cream: #f6f2e7;
+  --color-cream-dim: #efe8d6;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-forest-deep: var(--color-forest-deep);
+  --color-forest: var(--color-forest);
+  --color-forest-light: var(--color-forest-light);
+  --color-forest-vivid: var(--color-forest-vivid);
+  --color-moss: var(--color-moss);
+  --color-sage-light: var(--color-sage-light);
+  --color-sun: var(--color-sun);
+  --color-sun-light: var(--color-sun-light);
+  --color-cream: var(--color-cream);
+  --color-cream-dim: var(--color-cream-dim);
+
+  --font-serif: var(--font-fraunces);
+  --font-sans: var(--font-manrope);
+}
+
+body {
+  background: var(--color-forest-deep);
+  color: var(--color-cream);
+  font-family: var(--font-sans);
+}
+
+/* shared green gradient background for full-bleed sections */
+.section-green-gradient {
+  background: linear-gradient(
+    160deg,
+    var(--color-forest-vivid) 0%,
+    var(--color-forest) 80%,
+    var(--color-forest) 100%
+  );
+}
+
+/* subtle paper grain used behind sections for a tactile, non-corporate feel */
+.paper-grain {
+  position: relative;
+  isolation: isolate;
+}
+.paper-grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* Home - Hero */
+
+/* Hero */
+/* .hero {
+  position: relative;
+  height: 670px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+} */
+
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.hero-bg-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.hero-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 28, 16, 0.5);
+}
+
+.hero-dots {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.hero-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  border: none;
+  cursor: pointer;
+}
+
+.hero-dot.active {
+  background: #fff;
+  width: 24px;
+  border-radius: 3px;
+}
+
+.hero-scroll {
+  position: absolute;
+  bottom: 2.5rem;
+  right: 3rem;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.hero-scroll-line {
+  width: 1px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.25);
+  animation: scrollpulse 2s ease-in-out infinite;
+}
+
+@keyframes scrollpulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
