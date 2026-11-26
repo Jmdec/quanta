@@ -85,7 +85,7 @@ export function PromoModal() {
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/tissuemarket.png"
+            src="/POP-UP-BANNER.png"
             alt="Tissuemarket is now online — visit tissuemarket.com"
             className="block w-full"
           />
