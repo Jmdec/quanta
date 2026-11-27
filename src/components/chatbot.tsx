@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { X, Send, HeadphonesIcon, Clock, MessageSquare } from "lucide-react";
+import { ChatPayload } from "@/types/live-chat";
 
 type SenderType = "user" | "bot";
 type Message = {
@@ -10,262 +11,50 @@ type Message = {
   sender: SenderType;
   suggestions?: string[];
 };
+type BotReply = { text: string; suggestions: string[] };
+type LiveStep = "idle" | "askName" | "askConcern" | "live";
 
-const CONTACT = {
-  email: "wecare@quantapaper.com",
-  phone: "(632) 8533-9250",
-  fax: "(632) 8533-7295",
-  address:
-    "149-A Rev. Aglipay St., Bgy. Old Zaniga, Mandaluyong City, Philippines",
-  plantAddress:
-    "Ninoy Aquino Highway beside TIPCO Gate 3, Barangay Paralayunan, Mabalacat City, Pampanga",
-  mapUrl: "https://maps.app.goo.gl/JPqUN64Ry6JCeG8M7",
-  contactFormUrl: "/contact",
-  shopUrl: "https://www.tissuemarket.com/shop",
-  groupUrl: "/group-of-companies",
-  hours: "Mon–Sun 9AM–6PM",
-  departments: {
-    customerCare: "wecare@quantapaper.com",
-    creditCollection: "cnc@quantapaper.com",
-    consumerSales: "salesadmin@quantapaper.com",
-    institutionalSales: "quanta.institutionals@quantapaper.com",
-    hr: "human.resources@quantapaper.com",
-  },
-};
-
-const PRODUCT_CATEGORIES = {
-  paper: {
-    label: "Paper Products",
-    brands: [
-      "Fresh Premium Eco-Pulp",
-      "Kami",
-      "Smart Choice",
-      "Vanita",
-      "Fresh",
-      "Harmony",
-      "Fresh by Eco Hygiene",
-    ],
-  },
-  personal_care: {
-    label: "Personal Care Products",
-    brands: ["Sweet Baby", "Prime Care", "Life Defender"],
-  },
-  oral_care: {
-    label: "Oral Care Products",
-    brands: ["Fresh Toothbrush", "Teabiotic"],
-  },
-} as const;
-
-type ProductCategoryKey = keyof typeof PRODUCT_CATEGORIES;
-type FaqTopic = "product" | "ordering" | "distribution" | "general";
-
-const CAREERS = [
-  { title: "Business Control", url: "/careers/business-control" },
-  { title: "Admin Staff", url: "/careers/admin-staff" },
-  { title: "Accounting Supervisor", url: "/careers/accounting-supervisor" },
-  { title: "Logistics Officer", url: "/careers/logistic-officer" },
-  { title: "DC Supervisor", url: "/careers/dc-supervisor" },
-  { title: "Logistics Coordinator", url: "/careers/logistic-coordinator" },
-];
-
-interface Intent {
-  action?:
-    | "products"
-    | "about"
-    | "careers"
-    | "contact"
-    | "shop"
-    | "group"
-    | "faq";
-  productCategory?: ProductCategoryKey;
-  faqTopic?: FaqTopic;
-}
-
-function detectIntent(text: string): Intent {
-  const lower = text.toLowerCase();
-  const intent: Intent = {};
-
-  // Products (category-specific first, generic fallback after)
-  if (
-    /\b(paper|tissue|napkin|towel|eco-pulp|kami|smart choice|vanita|harmony)\b/.test(
-      lower,
-    )
-  ) {
-    intent.action = "products";
-    intent.productCategory = "paper";
-  } else if (
-    /\b(personal care|baby|diaper|feminine|sweet baby|prime care|life defender)\b/.test(
-      lower,
-    )
-  ) {
-    intent.action = "products";
-    intent.productCategory = "personal_care";
-  } else if (/\b(oral care|toothbrush|teabiotic|dental)\b/.test(lower)) {
-    intent.action = "products";
-    intent.productCategory = "oral_care";
-  } else if (/\b(products?|brands?|catalog)\b/.test(lower)) {
-    intent.action = "products";
-  }
-
-  // FAQ (checked before generic action words so topic sticks)
-  if (/product inquir/.test(lower)) {
-    intent.action = "faq";
-    intent.faqTopic = "product";
-  } else if (/\bordering\b/.test(lower)) {
-    intent.action = "faq";
-    intent.faqTopic = "ordering";
-  } else if (/\bdistribution\b/.test(lower)) {
-    intent.action = "faq";
-    intent.faqTopic = "distribution";
-  } else if (/general company info/.test(lower)) {
-    intent.action = "faq";
-    intent.faqTopic = "general";
-  } else if (/\b(faq|frequently asked)\b/.test(lower)) {
-    intent.action = "faq";
-  }
-
-  if (/\b(career|job|hiring|vacanc(y|ies)|apply|employment)\b/.test(lower))
-    intent.action = "careers";
-  if (
-    /\b(contact|address|location|office|phone|number|saan|where|map)\b/.test(
-      lower,
-    )
-  )
-    intent.action = "contact";
-  if (/\b(shop|buy|purchase|order online|tissuemarket|store)\b/.test(lower))
-    intent.action = "shop";
-  if (
-    /\b(group|companies|subsidiar(y|ies)|marketing inc|eco hygiene|foundation)\b/.test(
-      lower,
-    )
-  )
-    intent.action = "group";
-  if (
-    /\b(about|who are you|quanta|mission|vision|history|certif|iso 9001|halal|sustainab)\b/.test(
-      lower,
-    )
-  )
-    intent.action = "about";
-
-  return intent;
-}
-
-const INITIAL_SUGGESTIONS = [
-  "Browse our products",
-  "Shop now",
-  "About Quanta Paper",
-  "Careers",
-  "Contact us",
-  "Frequently Asked Questions",
-];
-
+const HOURS = "Mon–Sun 9AM–6PM";
 const BACK_CHIP = "← Back to main menu";
-function withBack(suggestions: string[]): string[] {
-  if (suggestions.includes(BACK_CHIP)) return suggestions;
-  return [...suggestions, BACK_CHIP];
+const LIVE_CHIP = "💬 Talk to a person";
+const BOT_CHIP = "🤖 Back to assistant";
+const POLL_MS = 3000;
+const TOKEN_KEY = "quanta_live_chat_token";
+const OFFLINE_REPLY =
+  "⚠️ Sorry, I can't reach our server right now. Please try again in a moment or email **wecare@quantapaper.com**.";
+
+const withBack = (s: string[]) =>
+  s.includes(BACK_CHIP) ? s : [...s, BACK_CHIP];
+const withLive = (s: string[]) =>
+  s.includes(LIVE_CHIP) ? s : [...s, LIVE_CHIP];
+
+async function fetchWelcome(): Promise<BotReply> {
+  const res = await fetch("/api/chatbot/welcome", { cache: "no-store" });
+  const json = await res.json();
+  if (!res.ok || !json.success) throw new Error(json.message || "Failed");
+  return json.data;
 }
 
-function getStaticResponse(
-  intent: Intent,
-): { text: string; suggestions: string[] } | null {
-  switch (intent.action) {
-    case "products": {
-      if (intent.productCategory) {
-        const cat = PRODUCT_CATEGORIES[intent.productCategory];
-        return {
-          text: `🧻 **${cat.label}**\n\nOur brands:\n${cat.brands
-            .map((b) => `• ${b}`)
-            .join("\n")}\n\n[Shop these now](${CONTACT.shopUrl})`,
-          suggestions: withBack(["See other product categories", "Contact us"]),
-        };
-      }
-      return {
-        text: `🧻 **Our Products**\n\n📦 **Paper Products** — Fresh Premium Eco-Pulp, Kami, Smart Choice, Vanita, Fresh, Harmony, Fresh by Eco Hygiene\n\n👶 **Personal Care** — Sweet Baby, Prime Care, Life Defender\n\n🦷 **Oral Care** — Fresh Toothbrush, Teabiotic\n\n[Shop all products](${CONTACT.shopUrl})`,
-        suggestions: withBack([
-          "Paper products",
-          "Personal care products",
-          "Oral care products",
-        ]),
-      };
-    }
+async function fetchReply(message: string): Promise<BotReply> {
+  const res = await fetch("/api/chatbot/message", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message }),
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) throw new Error(json.message || "Failed");
+  return json.data;
+}
 
-    case "about":
-      return {
-        text: `🏢 **Quanta Paper Corporation**\n\nFounded in 2003, we're a reputable brand builder of high-quality, affordable, hygienic, and environment-friendly products.\n\n✅ ISO 9001:2015 certified\n✅ Green Choice Philippines seal\n✅ Halal (IDCP) certified\n\n🏭 5 paper machines · 30+ converting lines · 70-hectare plant in Mabalacat, Pampanga\n👥 1,000+ workforce`,
-        suggestions: withBack([
-          "Our group of companies",
-          "Careers",
-          "Contact us",
-        ]),
-      };
-
-    case "careers":
-      return {
-        text: `💼 **Careers at Quanta Paper Corporation**\n\nCurrent openings:\n${CAREERS.map(
-          (c) => `• [${c.title}](${c.url})`,
-        ).join("\n")}\n\n📧 Send your resume to **${CONTACT.departments.hr}**`,
-        suggestions: withBack(["About Quanta Paper", "Contact us"]),
-      };
-
-    case "contact":
-      return {
-        text: `📍 **Corporate Office**\n${CONTACT.address}\n\n🏭 **Manufacturing Plant**\n${CONTACT.plantAddress}\n\n📞 ${CONTACT.phone}\n📠 ${CONTACT.fax}\n📧 ${CONTACT.email}\n🕐 ${CONTACT.hours}\n\n[View on map](${CONTACT.mapUrl}) · [Send us an inquiry](${CONTACT.contactFormUrl})`,
-        suggestions: withBack(["Browse products", "Careers"]),
-      };
-
-    case "shop":
-      return {
-        text: `🛒 Shop our full lineup online: [https://www.tissuemarket.com/shop](${CONTACT.shopUrl})`,
-        suggestions: withBack(["Browse products", "Contact us"]),
-      };
-
-    case "group":
-      return {
-        text: `🏢 **Our Group of Companies**\n\n📦 **Quanta Paper Corporation** — Paper Manufacturing\n🏪 **Quanta Paper Marketing, Inc.** — Retail Distribution & Marketing\n🏬 **Eco Hygiene Institutional Sales Corp.** — Institutional Sales\n❤️ **Quanta Foundation, Inc.** — Corporate Social Responsibility\n\n[Learn more](${CONTACT.groupUrl})`,
-        suggestions: withBack(["About Quanta Paper", "Browse products"]),
-      };
-
-    case "faq": {
-      switch (intent.faqTopic) {
-        case "product":
-          return {
-            text: `❓ **Product Inquiries**\n\nQ: Are your products eco-friendly?\nA: Yes — our paper products use recycled fiber and FSC-certified virgin pulp.\n\nQ: Are your products certified?\nA: Yes — ISO 9001:2015, Green Choice Philippines, and Halal (IDCP) certified.`,
-            suggestions: withBack(["Browse products", "Ordering"]),
-          };
-        case "ordering":
-          return {
-            text: `❓ **Ordering**\n\nQ: Where can I buy Quanta Paper products?\nA: [Shop online](${CONTACT.shopUrl}), or find us in supermarkets, sari-sari stores, hotels, and restaurants nationwide.\n\nQ: Do you sell to businesses in bulk?\nA: Yes — reach our Institutional Sales team at **${CONTACT.departments.institutionalSales}**`,
-            suggestions: withBack(["Shop now", "Distribution"]),
-          };
-        case "distribution":
-          return {
-            text: `❓ **Distribution**\n\nQ: Do you distribute nationwide?\nA: Yes — through Quanta Paper Marketing, Inc., reaching distributors, wholesalers, and partners across Luzon, Visayas, and Mindanao.\n\nQ: Can I become a distributor/reseller?\nA: Reach our Consumer Sales team at **${CONTACT.departments.consumerSales}**`,
-            suggestions: withBack(["Ordering", "Contact us"]),
-          };
-        case "general":
-          return {
-            text: `❓ **General Company Information**\n\nQ: When was Quanta Paper Corporation founded?\nA: 2003, starting with four paper machines and fifty people.\n\nQ: Where is your plant located?\nA: Mabalacat, Pampanga — a 70-hectare site with 5 paper machines and 30+ converting lines.`,
-            suggestions: withBack([
-              "About Quanta Paper",
-              "Our group of companies",
-            ]),
-          };
-        default:
-          return {
-            text: `❓ **Frequently Asked Questions**\n\nWhat would you like to know more about?`,
-            suggestions: withBack([
-              "Product inquiries",
-              "Ordering",
-              "Distribution",
-              "General company info",
-            ]),
-          };
-      }
-    }
-
-    default:
-      return null;
-  }
+async function postJson(url: string, body: unknown) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) throw new Error(json.message || "Failed");
+  return json.data;
 }
 
 /** Renders **bold** and [label](url) markdown inline. */
@@ -283,7 +72,8 @@ function FormatText({ text }: { text: string }) {
             const linkMatch = seg.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
             if (linkMatch) {
               const [, label, url] = linkMatch;
-              return (
+              const safe = /^(https?:\/\/|\/|mailto:)/i.test(url);
+              return safe ? (
                 <a
                   key={j}
                   href={url}
@@ -293,6 +83,8 @@ function FormatText({ text }: { text: string }) {
                 >
                   {label}
                 </a>
+              ) : (
+                label
               );
             }
             return seg;
@@ -304,86 +96,234 @@ function FormatText({ text }: { text: string }) {
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 export function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [liveStep, setLiveStep] = useState<LiveStep>("idle");
+  const [liveToken, setLiveToken] = useState<string | null>(null);
+  const [pendingName, setPendingName] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const idRef = useRef(0);
+  const welcomeRequested = useRef(false);
+  const menuRef = useRef<string[]>([]);
+  const isOpenRef = useRef(false);
+  const seenRef = useRef<Set<number>>(new Set()); // server message ids already shown (dedupe)
+
+  const nextId = (prefix: string) => `${prefix}-${++idRef.current}`;
+
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+    if (isOpen) setUnreadCount(0);
+  }, [isOpen]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  // useEffect(() => {
-  //   if (isOpen) {
-  //     setTimeout(() => inputRef.current?.focus(), 100);
-  //     setUnreadCount(0);
-  //   }
-  // }, [isOpen]);
-
-  // Seed the welcome message once, the first time the chat is opened.
-  useEffect(() => {
-    if (!isOpen || messages.length > 0) return;
-    addBotMsg(
-      "👋 Welcome to **Quanta Paper Corporation Inc.**! How can I help you today?",
-      INITIAL_SUGGESTIONS,
-    );
-  }, [isOpen, messages.length]);
-
-  function addBotMsg(text: string, suggestions: string[]) {
+  function addMsg(text: string, sender: SenderType, suggestions?: string[]) {
     setMessages((prev) => [
       ...prev,
-      { id: `bot-${Date.now()}`, text, sender: "bot", suggestions },
+      { id: nextId(sender), text, sender, suggestions },
     ]);
   }
 
-  const sendMessage = (text: string) => {
-    if (!text.trim() || isTyping) return;
+  /** Show a message that came from the server (REST response, history or WebSocket). */
+  function showServerMessage(m: ChatPayload) {
+    if (seenRef.current.has(m.id)) return;
+    seenRef.current.add(m.id);
+    if (m.sender === "notice") return; // admin-only, never show to the customer
+    const fromCustomer = m.sender === "customer";
+    addMsg(m.body, fromCustomer ? "user" : "bot");
+    if (!fromCustomer && !isOpenRef.current) setUnreadCount((n) => n + 1);
+  }
 
-    if (
-      text === BACK_CHIP ||
-      text.toLowerCase().includes("back to main menu") ||
-      text.toLowerCase() === "main menu"
-    ) {
-      setMessages((prev) => [
-        ...prev,
-        { id: `user-${Date.now()}`, text, sender: "user" },
-      ]);
-      setIsTyping(true);
-      setTimeout(() => {
-        addBotMsg("What else can I help you with? 😊", INITIAL_SUGGESTIONS);
-        setIsTyping(false);
-      }, 400);
+  // Resume an existing live chat after a page reload.
+  useEffect(() => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) return;
+    let ignore = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/chat/${token}`, { cache: "no-store" });
+        const json = await res.json();
+        if (ignore) return;
+        if (!res.ok || !json.success || json.data.status === "closed") {
+          localStorage.removeItem(TOKEN_KEY);
+          return;
+        }
+        welcomeRequested.current = true; // skip the bot welcome, we have history
+        (json.data.messages as ChatPayload[]).forEach(showServerMessage);
+        setLiveToken(token);
+        setLiveStep("live");
+      } catch {
+        /* stay in bot mode */
+      }
+    })();
+    return () => {
+      ignore = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Polling: new agent messages (and "chat closed") arrive within a few seconds.
+  useEffect(() => {
+    if (!liveToken) return;
+    let stop = false;
+    let busy = false;
+
+    const tick = async () => {
+      if (busy) return;
+      busy = true;
+      try {
+        const res = await fetch(`/api/chat/${liveToken}`, {
+          cache: "no-store",
+        });
+        const json = await res.json();
+        if (stop || !res.ok || !json.success) return;
+        (json.data.messages as ChatPayload[]).forEach(showServerMessage);
+        if (json.data.status === "closed") endLive(false);
+      } catch {
+        /* try again on the next tick */
+      } finally {
+        busy = false;
+      }
+    };
+
+    const t = setInterval(tick, POLL_MS);
+    return () => {
+      stop = true;
+      clearInterval(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveToken]);
+
+  // Bot welcome, loaded from Laravel the first time the chat opens.
+  useEffect(() => {
+    if (!isOpen || welcomeRequested.current) return;
+    welcomeRequested.current = true;
+    setIsTyping(true);
+    fetchWelcome()
+      .then((w) => {
+        menuRef.current = withLive(w.suggestions);
+        addMsg(w.text, "bot", menuRef.current);
+      })
+      .catch(() => {
+        welcomeRequested.current = false;
+        addMsg(OFFLINE_REPLY, "bot", []);
+      })
+      .finally(() => setIsTyping(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  function endLive(announce = true) {
+    localStorage.removeItem(TOKEN_KEY);
+    setLiveToken(null);
+    setLiveStep("idle");
+    setPendingName("");
+    seenRef.current = new Set();
+    if (announce)
+      addMsg("You're back with our assistant. 😊", "bot", menuRef.current);
+  }
+
+  async function startLive(name: string, concern: string) {
+    const data = await postJson("/api/chat/start", { name, concern });
+    localStorage.setItem(TOKEN_KEY, data.token);
+    seenRef.current = new Set();
+    if (data.message_id) seenRef.current.add(data.message_id); // concern already shown locally
+    setLiveToken(data.token);
+    setLiveStep("live");
+    addMsg(
+      `✅ You're connected, ${name}! A team member will reply right here. (${HOURS})`,
+      "bot",
+      [BOT_CHIP],
+    );
+  }
+
+  async function sendMessage(raw: string) {
+    const text = raw.trim();
+    if (!text || isTyping) return;
+
+    // ── Live chat: ask name
+    if (liveStep === "askName") {
+      const name = text.slice(0, 100);
+      setInput("");
+      addMsg(text, "user");
+      setPendingName(name);
+      addMsg(`Thanks, ${name}! 😊 What can we help you with today?`, "bot");
+      setLiveStep("askConcern");
       return;
     }
 
-    setInput("");
-    setMessages((prev) => [
-      ...prev,
-      { id: `user-${Date.now()}`, text, sender: "user" },
-    ]);
-
-    const intent = detectIntent(text);
-    setIsTyping(true);
-
-    const staticResp = getStaticResponse(intent);
-    setTimeout(() => {
-      if (staticResp) {
-        addBotMsg(staticResp.text, withBack(staticResp.suggestions));
-      } else {
-        addBotMsg(
-          "😊 I can help with our products, company info, careers, or contact details. What would you like to know?",
-          INITIAL_SUGGESTIONS,
-        );
+    // ── Live chat: ask concern, then start the chat with it as the first message
+    if (liveStep === "askConcern") {
+      setInput("");
+      addMsg(text, "user");
+      setIsTyping(true);
+      try {
+        await startLive(pendingName, text.slice(0, 1000));
+      } catch {
+        setLiveStep("idle");
+        setPendingName("");
+        addMsg(OFFLINE_REPLY, "bot", menuRef.current);
+      } finally {
+        setIsTyping(false);
       }
+      return;
+    }
+
+    // ── Live chat: talking to a person
+    if (liveStep === "live" && liveToken) {
+      if (text === BOT_CHIP) {
+        addMsg(text, "user");
+        endLive();
+        return;
+      }
+      setInput("");
+      try {
+        const msg: ChatPayload = await postJson(
+          `/api/chat/${liveToken}/messages`,
+          { body: text },
+        );
+        showServerMessage(msg); // WebSocket echo of the same id is ignored
+      } catch {
+        addMsg("⚠️ Your message couldn't be sent. Please try again.", "bot");
+      }
+      return;
+    }
+
+    // ── Start live chat
+    if (text === LIVE_CHIP) {
+      addMsg(text, "user");
+      addMsg("Happy to connect you with our team 😊 What's your name?", "bot");
+      setLiveStep("askName");
+      return;
+    }
+
+    // ── Bot mode
+    setInput("");
+    addMsg(text, "user");
+    setIsTyping(true);
+    try {
+      if (text === BACK_CHIP) {
+        const w = await fetchWelcome();
+        menuRef.current = withLive(w.suggestions);
+        addMsg("What else can I help you with? 😊", "bot", menuRef.current);
+      } else {
+        const reply = await fetchReply(text);
+        addMsg(reply.text, "bot", withBack(reply.suggestions));
+      }
+    } catch {
+      addMsg(OFFLINE_REPLY, "bot", menuRef.current);
+    } finally {
       setIsTyping(false);
-    }, 600);
-  };
+    }
+  }
+
+  const isLive = liveStep === "live";
 
   return (
     <div className="fixed bottom-8 right-8 z-50">
@@ -404,14 +344,15 @@ export function Chatbot() {
                 </p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-lime-300" />
-                  <p className="text-green-50/90 text-xs">AI Assistant</p>
+                  <p className="text-green-50/90 text-xs">
+                    {isLive ? "Live chat with our team" : "AI Assistant"}
+                  </p>
                 </div>
               </div>
             </div>
             <button
-              onClick={() => {
-                setIsOpen(false);
-              }}
+              onClick={() => setIsOpen(false)}
+              aria-label="Close chat"
               className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition text-white"
             >
               <X className="w-4 h-4" />
@@ -419,11 +360,19 @@ export function Chatbot() {
           </div>
 
           {/* Sub-header */}
-          <div className="bg-neutral-50 px-4 py-2 flex items-center gap-4 flex-shrink-0 border-b border-neutral-200">
+          <div className="bg-neutral-50 px-4 py-2 flex items-center justify-between gap-4 flex-shrink-0 border-b border-neutral-200">
             <div className="flex items-center gap-1.5 text-neutral-500 text-xs font-medium">
               <Clock className="w-3 h-3" />
-              <span>{CONTACT.hours}</span>
+              <span>{HOURS}</span>
             </div>
+            {isLive && (
+              <button
+                onClick={() => endLive()}
+                className="text-xs font-medium text-green-700 hover:underline"
+              >
+                End live chat
+              </button>
+            )}
           </div>
 
           {/* Messages */}
@@ -443,7 +392,7 @@ export function Chatbot() {
                   <FormatText text={msg.text} />
                 </div>
 
-                {msg.sender !== "user" &&
+                {msg.sender === "bot" &&
                   msg.suggestions &&
                   msg.suggestions.length > 0 && (
                     <div className="flex flex-wrap gap-2 max-w-[90%]">
@@ -484,9 +433,17 @@ export function Chatbot() {
           <div className="bg-white border-t border-neutral-200 p-3 flex-shrink-0">
             <div className="flex gap-2 items-center">
               <input
-                ref={inputRef}
                 type="text"
-                placeholder="Ask about Quanta Paper products…"
+                maxLength={isLive || liveStep === "askConcern" ? 1000 : 500}
+                placeholder={
+                  liveStep === "askName"
+                    ? "Your name…"
+                    : liveStep === "askConcern"
+                      ? "Your concern…"
+                      : isLive
+                        ? "Message our team…"
+                        : "Ask about Quanta Paper products…"
+                }
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
@@ -495,6 +452,7 @@ export function Chatbot() {
               <button
                 onClick={() => sendMessage(input)}
                 disabled={!input.trim() || isTyping}
+                aria-label="Send"
                 className="w-9 h-9 bg-green-600 hover:bg-green-700 disabled:opacity-30 text-white rounded-xl flex items-center justify-center transition-all flex-shrink-0 shadow-sm"
               >
                 <Send className="w-4 h-4" />
@@ -509,12 +467,8 @@ export function Chatbot() {
 
       {/* FAB */}
       <button
-        {...(isOpen
-          ? {
-              onClick: () => setIsOpen(false),
-              setUnreadCount: () => setUnreadCount(0),
-            }
-          : { onClick: () => setIsOpen(true) })}
+        onClick={() => setIsOpen((o) => !o)}
+        aria-label={isOpen ? "Close chat" : "Open chat"}
         className="relative w-14 h-14 rounded-full bg-gradient-to-br -top-1 -right-4 from-green-700 to-green-500 text-white shadow-xl shadow-green-900/25 hover:shadow-green-700/35 hover:scale-105 transition-all duration-300 flex items-center justify-center border border-green-400/30"
       >
         {isOpen ? (

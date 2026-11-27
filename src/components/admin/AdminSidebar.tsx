@@ -1,4 +1,4 @@
-// components/admin/admin-sidebar.tsx
+// File: components/admin/admin-sidebar.tsx
 "use client";
 
 import Link from "next/link";
@@ -10,6 +10,8 @@ import {
   Settings,
   Newspaper,
   ClipboardList,
+  Bot, // NEW
+  MessagesSquare, // NEW
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -73,6 +75,18 @@ const navItems = [
     label: "Contact",
     href: "/admin/contact",
     icon: Package,
+  },
+  // NEW — live customer conversations (WebSocket inbox)
+  {
+    label: "Live Chat",
+    href: "/admin/live-agent",
+    icon: MessagesSquare,
+  },
+  // NEW — manage the chatbot's answers + unanswered questions
+  {
+    label: "Chatbot",
+    href: "/admin/chatbot",
+    icon: Bot,
   },
   {
     label: "Settings",

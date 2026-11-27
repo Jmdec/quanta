@@ -1,10 +1,16 @@
-// lib/forward-json.ts
+// File: lib/forward-json.ts
 import { NextResponse } from "next/server";
 
 // Reads the body as text first so a non-JSON response from Laravel
 // (stray warning, HTML error page) is logged instead of throwing.
 export async function forwardJson(res: Response) {
   const raw = await res.text();
+
+  // Successful empty response (e.g. 204 No Content)
+  if (!raw.trim() && res.ok) {
+    return NextResponse.json({ success: true }, { status: 200 });
+  }
+
   try {
     return NextResponse.json(JSON.parse(raw), { status: res.status });
   } catch {
@@ -13,7 +19,10 @@ export async function forwardJson(res: Response) {
       {
         success: false,
         message: "Backend returned an invalid response.",
-        debug: raw.slice(0, 2000),
+        // Only expose raw backend output while developing
+        ...(process.env.NODE_ENV !== "production" && {
+          debug: raw.slice(0, 2000),
+        }),
       },
       { status: 502 },
     );
