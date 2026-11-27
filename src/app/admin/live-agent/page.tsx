@@ -248,13 +248,13 @@ export default function AdminLiveChatPage() {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6">
-      <div className="mb-4 flex items-end justify-between gap-4">
+    <div className="w-full">
+      <div className="mb-3 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+          <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
             Live chat
           </h1>
-          <p className="mt-0.5 text-sm text-neutral-500">
+          <p className="text-sm font-medium text-neutral-800">
             Customers who asked to talk to a person. Updates every few seconds.
           </p>
         </div>
@@ -272,7 +272,7 @@ export default function AdminLiveChatPage() {
         </span>
       </div>
 
-      <div className="flex h-[calc(100vh-11rem)] min-h-[520px] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+      <div className="flex h-[calc(100vh-9rem)] min-h-[520px] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
         {/* ───────── Inbox ───────── */}
         <aside
           className={`${
