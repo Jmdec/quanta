@@ -105,6 +105,7 @@ export function Chatbot() {
   const [liveStep, setLiveStep] = useState<LiveStep>("idle");
   const [liveToken, setLiveToken] = useState<string | null>(null);
   const [pendingName, setPendingName] = useState("");
+  const [agentJoined, setAgentJoined] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const idRef = useRef(0);
@@ -136,6 +137,7 @@ export function Chatbot() {
     if (seenRef.current.has(m.id)) return;
     seenRef.current.add(m.id);
     if (m.sender === "notice") return; // admin-only, never show to the customer
+    if (m.sender === "admin") setAgentJoined(true);
     const fromCustomer = m.sender === "customer";
     addMsg(m.body, fromCustomer ? "user" : "bot");
     if (!fromCustomer && !isOpenRef.current) setUnreadCount((n) => n + 1);
@@ -224,6 +226,7 @@ export function Chatbot() {
     setLiveToken(null);
     setLiveStep("idle");
     setPendingName("");
+    setAgentJoined(false);
     seenRef.current = new Set();
     if (announce)
       addMsg("You're back with our assistant. 😊", "bot", menuRef.current);
@@ -234,10 +237,11 @@ export function Chatbot() {
     localStorage.setItem(TOKEN_KEY, data.token);
     seenRef.current = new Set();
     if (data.message_id) seenRef.current.add(data.message_id); // concern already shown locally
+    setAgentJoined(false);
     setLiveToken(data.token);
     setLiveStep("live");
     addMsg(
-      `✅ You're connected, ${name}! A team member will reply right here. (${HOURS})`,
+      `Thanks, ${name}! We've received your message. A team member will reply here as soon as one is available. (${HOURS})\n\nYou can keep chatting with the assistant anytime.`,
       "bot",
       [BOT_CHIP],
     );
@@ -343,9 +347,17 @@ export function Chatbot() {
                   Quanta Paper Corporation
                 </p>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-lime-300" />
+                  <div
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      isLive && !agentJoined ? "bg-amber-300" : "bg-lime-300"
+                    }`}
+                  />
                   <p className="text-green-50/90 text-xs">
-                    {isLive ? "Live chat with our team" : "AI Assistant"}
+                    {isLive
+                      ? agentJoined
+                        ? "Live chat with our team"
+                        : "Waiting for a team member"
+                      : "AI Assistant"}
                   </p>
                 </div>
               </div>
