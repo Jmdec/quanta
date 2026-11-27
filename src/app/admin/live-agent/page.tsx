@@ -286,7 +286,7 @@ export default function AdminLiveChatPage() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search name or message"
-                className="w-full rounded-lg border border-neutral-200 bg-neutral-50 py-2 pl-9 pr-3 text-sm placeholder-neutral-400 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                className="w-full rounded-lg border border-neutral-200 bg-neutral-50 py-2 pl-9 pr-3 text-sm text-neutral-900 caret-emerald-700 placeholder-neutral-500 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
               />
             </div>
             <div className="flex gap-1">
@@ -521,7 +521,7 @@ export default function AdminLiveChatPage() {
                   rows={1}
                   maxLength={1000}
                   placeholder="Write a reply. Enter to send, Shift+Enter for a new line."
-                  className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border border-neutral-300 px-4 py-2.5 text-[15px] placeholder-neutral-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
+                  className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-[15px] text-neutral-900 caret-emerald-700 placeholder-neutral-500 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/15"
                 />
                 <button
                   onClick={sendReply}
